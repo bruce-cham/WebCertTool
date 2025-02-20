@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>证书管理工具</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        .container {
+            width: 60%;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>证书管理工具</h1>
+
+        <!-- 上传文件表单 -->
+        <form id="fileForm" enctype="multipart/form-data">
+            <label for="file">选择证书文件：</label>
+            <input type="file" id="file" name="file" required>
+            <br><br>
+            <button type="submit">上传证书</button>
+        </form>
+
+        <!-- 选择操作 -->
+        <div id="operations" style="display:none;">
+            <h2>选择操作</h2>
+            <button id="viewPrivateKeyBtn">查看私钥</button>
+            <button id="generatePublicKeyBtn">生成公钥</button>
+            <button id="convertPemToDerBtn">PEM 转 DER</button>
+            <button id="convertPemToPfxBtn">PEM 转 PFX</button>
+        </div>
+
+        <!-- 操作结果 -->
+        <div id="result" class="result" style="display:none;"></div>
+    </div>
+
+    <script>
+        // 用于存储上传的文件路径
+        let filePath = "";
+
+        // 上传证书文件
+        document.getElementById('fileForm').addEventListener('submit', function (event) {
+            event.preventDefault();
+            let formData = new FormData();
+            let fileInput = document.getElementById('file');
+            formData.append("file", fileInput.files[0]);
+
+            fetch('http://127.0.0.1:5000/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    alert(data.message);
+                    filePath = fileInput.files[0].name;  // 文件路径暂时使用文件名
+                    document.getElementById('operations').style.display = 'block';
+                } else {
+                    alert('上传失败');
+                }
+            })
+            .catch(error => {
+                alert('上传失败: ' + error);
+            });
+        });
+
+        // 查看私钥
+        document.getElementById('viewPrivateKeyBtn').addEventListener('click', function () {
+            fetch('http://127.0.0.1:5000/view_private_key', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ "file_path": filePath })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('result').style.display = 'block';
+                document.getElementById('result').innerText = data.private_key || data.error;
+            });
+        });
+
+        // 生成公钥
+        document.getElementById('generatePublicKeyBtn').addEventListener('click', function () {
+            fetch('http://127.0.0.1:5000/generate_public_key', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ "file_path": filePath })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('result').style.display = 'block';
+                document.getElementById('result').innerText = data.public_key || data.error;
+            });
+        });
+
+        // PEM 转 DER
+        document.getElementById('convertPemToDerBtn').addEventListener('click', function () {
+            let outputPath = "certificate.der";  // 可以根据需要动态修改输出路径
+            fetch('http://127.0.0.1:5000/convert_pem_to_der', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ "file_path": filePath, "output_path": outputPath })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('result').style.display = 'block';
+                document.getElementById('result').innerText = data.message || data.error;
+            });
+        });
+
+        // PEM 转 PFX
+        document.getElementById('convertPemToPfxBtn').addEventListener('click', function () {
+            let outputPfxPath = "certificate.pfx";  // 可以根据需要动态修改输出路径
+            fetch('http://127.0.0.1:5000/convert_pem_to_pfx', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    "private_key_path": filePath,
+                    "certificate_path": filePath,
+                    "output_pfx_path": outputPfxPath
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('result').style.display = 'block';
+                document.getElementById('result').innerText = data.message || data.error;
+            });
+        });
+    </script>
+</body>
+</html>
