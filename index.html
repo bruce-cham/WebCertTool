@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>证书转换工具</title>
+</head>
+<body>
+    <h2>证书转换工具</h2>
+    <form id="uploadForm">
+        <input type="file" id="fileInput" required>
+        <select id="formatSelect">
+            <option value="pem">PEM</option>
+            <option value="pfx">PFX</option>
+            <option value="jks">JKS</option>
+            <option value="der">DER</option>
+        </select>
+        <input type="password" id="passwordInput" placeholder="证书密码（可选）">
+        <button type="submit">转换</button>
+    </form>
+    <a id="downloadLink" style="display:none;">下载转换文件</a>
+
+    <script>
+        document.getElementById("uploadForm").addEventListener("submit", async function(event) {
+            event.preventDefault();
+            
+            let fileInput = document.getElementById("fileInput").files[0];
+            let format = document.getElementById("formatSelect").value;
+            let password = document.getElementById("passwordInput").value;
+
+            if (!fileInput) {
+                alert("请选择文件");
+                return;
+            }
+
+            let formData = new FormData();
+            formData.append("file", fileInput);
+            formData.append("format", format);
+            if (password) {
+                formData.append("password", password);
+            }
+
+            let response = await fetch("http://your-server-ip:5000/convert", {
+                method: "POST",
+                body: formData
+            });
+
+            if (response.ok) {
+                let blob = await response.blob();
+                let url = URL.createObjectURL(blob);
+                let link = document.getElementById("downloadLink");
+                link.href = url;
+                link.download = `converted.${format}`;
+                link.style.display = "block";
+                link.textContent = "下载转换文件";
+            } else {
+                let error = await response.json();
+                alert(error.error);
+            }
+        });
+    </script>
+</body>
+</html>
